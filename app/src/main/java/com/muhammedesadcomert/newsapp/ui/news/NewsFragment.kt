@@ -8,7 +8,6 @@ import android.view.ViewGroup
 import android.widget.AbsListView
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -17,7 +16,6 @@ import com.muhammedesadcomert.newsapp.data.util.Constants.Companion.QUERY_PAGE_S
 import com.muhammedesadcomert.newsapp.data.util.Constants.Companion.SEARCH_NEWS_TIME_DELAY
 import com.muhammedesadcomert.newsapp.data.util.Resource
 import com.muhammedesadcomert.newsapp.databinding.FragmentNewsBinding
-import com.muhammedesadcomert.newsapp.ui.NewsApplication
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
@@ -47,9 +45,17 @@ class NewsFragment : Fragment() {
     ): View {
         _binding = FragmentNewsBinding.inflate(inflater, container, false)
 
+        setupRecyclerView()
+        setupSearchListener()
+        setupClearButton()
+        observeNews()
+
+        return binding.root
+    }
+
+    private fun setupRecyclerView() {
         newsAdapter = NewsAdapter { article ->
-            val action =
-                NewsFragmentDirections.actionNavigationNewsToNavigationDetail(article, false)
+            val action = NewsFragmentDirections.actionNavigationNewsToNavigationDetail(article, false)
             findNavController().navigate(action)
         }
 
@@ -59,20 +65,37 @@ class NewsFragment : Fragment() {
             setHasFixedSize(true)
             addOnScrollListener(this@NewsFragment.scrollListener)
         }
+    }
 
-        binding.clearSearch.setOnClickListener {
-            binding.searchBar.text.clear()
-        }
-
-        binding.searchBar.addTextChangedListener {
+    private fun setupSearchListener() {
+        binding.searchBar.addTextChangedListener { editable ->
             job?.cancel()
             job = MainScope().launch {
                 delay(SEARCH_NEWS_TIME_DELAY)
-                if (it.toString().isNotEmpty())
-                    viewModel.getAllNewArticles(it.toString())
+                editable?.let {
+                    if (it.toString().isNotEmpty()) {
+                        viewModel.resetState() // Reset state before new search
+                        viewModel.getAllNewArticles(it.toString())
+                    } else {
+                        // If search is empty, reset to default state
+                        viewModel.resetState()
+                        viewModel.getAllArticles(DEFAULT_TOPIC)
+                    }
+                }
             }
         }
+    }
 
+    private fun setupClearButton() {
+        binding.clearSearch.setOnClickListener {
+            binding.searchBar.text?.clear()
+            // Reset to default state when clear button is clicked
+            viewModel.resetState()
+            viewModel.getAllArticles(DEFAULT_TOPIC)
+        }
+    }
+
+    private fun observeNews() {
         viewModel.articles.observe(viewLifecycleOwner) { response ->
             when (response) {
                 is Resource.Success -> {
@@ -97,8 +120,6 @@ class NewsFragment : Fragment() {
                 }
             }
         }
-
-        return binding.root
     }
 
     private fun hideProgressBar() {
@@ -131,10 +152,16 @@ class NewsFragment : Fragment() {
             val isNotAtBeginning = firstVisibleItemPosition >= 0
             val isTotalMoreThanVisible = totalItemCount >= QUERY_PAGE_SIZE
             val shouldPaginate =
-                isNotLoadingAndNotLastPage && isAtLastItem && isNotAtBeginning && isTotalMoreThanVisible && isScrolling
+                isNotLoadingAndNotLastPage && isAtLastItem && isNotAtBeginning &&
+                        isTotalMoreThanVisible && isScrolling
 
             if (shouldPaginate) {
-                viewModel.getAllArticles(q = binding.searchBar.text.toString())
+                val searchQuery = binding.searchBar.text.toString()
+                if (searchQuery.isEmpty()) {
+                    viewModel.getAllArticles(DEFAULT_TOPIC)
+                } else {
+                    viewModel.getAllArticles(searchQuery)
+                }
                 isScrolling = false
             }
         }
@@ -143,5 +170,9 @@ class NewsFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+    }
+
+    companion object {
+        private const val DEFAULT_TOPIC = "general"
     }
 }

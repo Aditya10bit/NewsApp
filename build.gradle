@@ -1,20 +1,24 @@
 buildscript {
     ext {
-        room_version = "2.4.3"
-        nav_version = "2.5.1"
-        lifecycle_version = '2.5.1'
-        hilt_version = '2.42'
+        room_version = "2.5.2" // Updated Room version
+        nav_version = "2.6.0"  // Updated Navigation version
+        lifecycle_version = '2.6.1' // Updated Lifecycle version
+        hilt_version = '2.47'  // Updated Hilt version
     }
     dependencies {
+        // Safe Args Gradle Plugin for Navigation
         classpath "androidx.navigation:navigation-safe-args-gradle-plugin:$nav_version"
+
+        // Hilt Gradle Plugin
         classpath "com.google.dagger:hilt-android-gradle-plugin:$hilt_version"
     }
 }
 
 plugins {
-    id 'com.android.application' version '7.1.3' apply false
-    id 'com.android.library' version '7.1.3' apply false
-    id 'org.jetbrains.kotlin.android' version '1.6.21' apply false
+    id 'com.android.application' version '8.1.0' apply false // Updated Gradle Plugin version
+    id 'com.android.library' version '8.1.0' apply false
+    id 'org.jetbrains.kotlin.android' version '1.8.22' apply false // Updated Kotlin version
+    id 'com.google.gms.google-services' version '4.3.15' apply false // Updated Google Services plugin
 }
 
 task clean(type: Delete) {

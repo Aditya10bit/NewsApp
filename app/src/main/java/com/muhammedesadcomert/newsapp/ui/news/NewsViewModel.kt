@@ -25,6 +25,11 @@ class NewsViewModel @Inject constructor(private val articleRepository: ArticleRe
         getAllArticles(DEFAULT_TOPIC)
     }
 
+    fun resetState() {
+        page = STARTING_PAGE_INDEX
+        newsResponse = null
+    }
+
     fun getAllArticles(q: String) = viewModelScope.launch {
         articles.postValue(Resource.Loading())
         val response = articleRepository.getAllArticles(q, page)
@@ -33,6 +38,7 @@ class NewsViewModel @Inject constructor(private val articleRepository: ArticleRe
 
     fun getAllNewArticles(q: String) = viewModelScope.launch {
         articles.postValue(Resource.Loading())
+        resetState() // Reset state before new search
         val response = articleRepository.getAllArticles(q, page)
         articles.postValue(handleNewArticlesResponse(response))
     }
@@ -48,7 +54,7 @@ class NewsViewModel @Inject constructor(private val articleRepository: ArticleRe
                     val newArticles = it.articles
                     oldArticles?.addAll(newArticles)
                 }
-                return Resource.Success(it)
+                return Resource.Success(newsResponse ?: it)
             }
         }
         return Resource.Error(response.message())
